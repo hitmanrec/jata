@@ -28,38 +28,21 @@ export default {
 	},
 	data() {
 		return {
-			items: [{
-				title: 'Просто запредельно',
-				status: 'incomplete',
-				tags: ['фантастика', 'юмор'],
-				rating: '',
-				expectation: '',
-				description: 'сериал?',
-				creationTime: 123,
-				completionTime: ''
-			}, {
-				title: 'Dark matter',
-				status: 'incomplete',
-				tags: [],
-				rating: '',
-				expectation: '',
-				description: '',
-				creationTime: 124,
-				completionTime: ''
-			}, {
-				title: 'баллада бастера скраггса',
-				status: 'incomplete',
-				tags: [],
-				rating: '',
-				expectation: '',
-				description: '',
-				creationTime: 125,
-				completionTime: ''
-			}],
-			showAddItemDialog: false
+			items: [],
+			showAddItemDialog: false,
+			serverUrl: 'http://localhost:8081'
 		}
 	},
 	methods: {
+		async fetchItems() {
+			try {
+				const response = await fetch(`${this.serverUrl}/api/items`)
+				const data = await response.json()
+				this.items = data.items || []
+			} catch (error) {
+				console.error('Error fetching items:', error)
+			}
+		},
 		addItem(item) {
 			this.items.push(item)
 			this.showAddItemDialog = false
@@ -67,6 +50,9 @@ export default {
 		deleteItem(item) {
 			this.items = this.items.filter(i => i.creationTime !== item.creationTime)
 		}
+	},
+	mounted() {
+		this.fetchItems()
 	}
 }
 </script>

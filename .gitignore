@@ -21,3 +21,7 @@ pnpm-debug.log*
 *.njsproj
 *.sln
 *.sw?
+server/jata_server.exe
+server/sample_input.txt
+server/test_save.json
+server/test.json
