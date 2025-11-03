@@ -2,6 +2,7 @@
 #include "include/nlohmann_json.hpp"
 #include <unordered_map>
 #include <fstream>
+#include <iostream>
 
 
 using json = nlohmann::json;
@@ -143,9 +144,10 @@ private:
 	unsigned int nextItemId;
 	unsigned int nextCategoryId;
 	FileManager fm;
+	int debugLevel = 0;
 
 public:
-	ItemsKeeper(const std::string& filePath) : fm(filePath) {
+	ItemsKeeper(const std::string& filePath, int debugLevel = 0) : fm(filePath), debugLevel(debugLevel) {
 		init();
 	}
 
@@ -154,13 +156,45 @@ public:
 		return 0;
 	}
 
-	json get(const unsigned int categoryId, const std::vector<int> itemIds){
-		json data;
-		data["items"] = json::array();
-		for(const auto& itemId : itemIds){
-			data["items"].push_back(categories[categoryId].items[itemId].toJson());
+	json get(json request){
+		json response;
+		if(debugLevel >= 3){
+			std::cout << "request: " << request.dump(2) << std::endl;
 		}
-		return data;
+		if(request.contains("categoryIds")){
+			response["categories"] = json::array();
+			if(request["categoryIds"] == "all"){
+				for(const auto& category : categories){
+					response["categories"].push_back({
+						{"id", category.second.id}, 
+						{"name", category.second.name}, 
+						{"removed", category.second.removed}
+					});
+				}
+			}else{
+				for(const auto& categoryId : request["categoryIds"]){
+					
+					if(request.contains("withItems") && request["withItems"]){
+						response["categories"].push_back(categories[categoryId].toJson());
+					}else{
+						response["categories"].push_back({
+							{"id", categoryId},
+							{"name", categories[categoryId].name},
+							{"removed", categories[categoryId].removed}
+						});
+					}
+				}
+			}
+		}
+		if(request.contains("nextIds") && request["nextIds"]){
+			response["nextCategoryId"] = nextCategoryId;
+			response["nextItemId"] = nextItemId;
+		}
+		if(debugLevel >= 3){
+			std::cout << "response: " << response.dump(2) << std::endl;
+		}
+		
+		return response;
 
 	}
 

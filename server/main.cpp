@@ -40,15 +40,10 @@ int main(int argc, char* argv[]) {
         return;
     });
 
-    // GET endpoint: Get all items (you might want to expand this)
-    svr.Get("/api/items", [&ik](const httplib::Request& req, httplib::Response& res) {
+    svr.Post("/api/categories", [&ik](const httplib::Request& req, httplib::Response& res) {
         try {
-            // For now, get 5 items
             json response;
-            response = ik.get(2, {118, 102, 55, 61, 65});
-            
-            // You'll need to add a method to get all categories/items
-            // For now, this is a placeholder structure
+            response = ik.get(json::parse(req.body));
             res.set_content(response.dump(), "application/json");
         } catch (const std::exception& e) {
             res.status = 500;

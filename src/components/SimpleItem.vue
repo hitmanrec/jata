@@ -2,19 +2,24 @@
 <template>
 	<div class="item">
 		<div class="item-content">
-			<div class="title">
-				{{ item.title }}
+			<div class="item-header">
+				<div class="title">
+					{{ item.title }}
+				</div>
+				<div class="status">
+					{{ item.status }}
+				</div>
 			</div>
 			<div v-if="item.tags.length > 0" class="tags">
 				Tags: {{ item.tags.join(', ') }}
 			</div>
-			<div class="status">
-				Status: {{ item.status }}
+			<div class="description">
+				{{ item.description.substring(0, 100) }}{{ item.description.length > 100 ? '...' : '' }}
 			</div>
-			<div class="expectation">
+			<div v-if="item.status === 'incomplete' || item.status === 'started'" class="expectation">
 				Expectation: {{ item.expectation }}
 			</div>
-			<div class="rating">
+			<div v-if="item.status === 'complete'|| item.status === 'dropped'" class="rating">
 				Rating: {{ item.rating }}
 			</div>
 		</div>
@@ -58,7 +63,6 @@ export default {
 	font-family: var(--strong-font);
 	font-weight: var(--main-font-weight);
 	font-size: 1.2em;
-	margin-bottom: 5px;
 }
 
 .status{
@@ -71,6 +75,13 @@ export default {
 
 .expectation{
 	align-self: flex-end;
+}
+
+.item-header{
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	margin-bottom: 5px;
 }
 
 .item-btns{

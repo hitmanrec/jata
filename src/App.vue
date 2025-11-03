@@ -1,58 +1,184 @@
 <template>
 	<div class="app">
-		<add-item-dialog v-model:show="showAddItemDialog">
-			<add-item-form 
+
+		<!-- SIDE PANEL -->
+		<side-panel 
+			:categories="simpleCategories" 
+			:selectedCategoryId="selectedCategoryId"
+			@select-category="selectedCategoryId = $event"
+			@add-category="addCategory"
+		 />
+
+		<!-- CATEGORY VIEW -->
+		<div v-if="loaded" class="category-view">
+			<div class="top-bar">
+				<simple-input-box
+					v-model="searchQuery"
+					placeholder="Search"
+				/>
+				<drop-down-dynamic-select 
+					v-model="selectedSort"
+					placeholder="No sorting"
+					:select_options="sortOptions"
+				/>
+			</div>
+
+			<item-list
+				:items="filteredBySearch" 
+				:category="categories.find(c => c.id === selectedCategoryId)"
+				@delete-item="deleteItem"
 				@add-item="addItem"
 			/>
-		</add-item-dialog>
-		<small-button class="add-item-button" @click="showAddItemDialog = true">
-			Add film
-		</small-button>
-		<item-list 
-			:items="items" 
-			@delete-item="deleteItem"
-		/>
-		
+			
+		</div>
 	</div>
 </template>
 
 
 <script>
-import AddItemForm from '@/components/AddItemForm'
 import ItemList from '@/components/ItemList'
+import SidePanel from '@/components/SidePanel'
 
 export default {
 	components: {
-		AddItemForm,
-		ItemList
+		ItemList,
+		SidePanel
 	},
 	data() {
 		return {
-			items: [],
-			showAddItemDialog: false,
-			serverUrl: 'http://localhost:8081'
+			selectedCategoryId: 0,
+			categories: [],
+			serverUrl: 'http://localhost:8081',
+			selectedSort: '',
+			nextCategoryId: 0,
+			nextItemId: 0,
+			loaded: false,
+			sortOptions: [
+				//{value: 'creationTimeAsc', label: 'Creation Time Ascending'}, 
+				//{value: 'creationTimeDesc', label: 'Creation Time Descending'}, 
+				{value: 'titleAsc', label: 'Title Ascending'}, 
+				{value: 'titleDesc', label: 'Title Descending'}, 
+				//{value: 'ratingAsc', label: 'Rating Ascending'}, 
+				//{value: 'ratingDesc', label: 'Rating Descending'}, 
+				//{value: 'expectationAsc', label: 'Expectation Ascending'}, 
+				//{value: 'expectationDesc', label: 'Expectation Descending'}
+			],
+			searchQuery: ''
 		}
 	},
 	methods: {
-		async fetchItems() {
+		async fetchItems(categoryId) {
 			try {
-				const response = await fetch(`${this.serverUrl}/api/items`)
+				const requestOptions = {
+					categoryIds: [categoryId],
+					withItems: true
+				}
+				const response = await fetch(`${this.serverUrl}/api/categories`, {
+					method: 'POST',
+					headers: {
+						'Content-Type': 'application/json'
+					},
+					body: JSON.stringify({
+						...requestOptions
+					})
+				})
 				const data = await response.json()
-				this.items = data.items || []
+				console.log(data)
+				if(data.categories.length > 0){
+					const cIndex = this.categories.findIndex(c => c.id === categoryId)
+					if(cIndex !== -1){
+						this.categories[cIndex] = data.categories[0]
+					}
+				}
 			} catch (error) {
 				console.error('Error fetching items:', error)
 			}
 		},
+		async fetchCategories() {
+			try {
+				const response = await fetch(`${this.serverUrl}/api/categories`, {
+					method: 'POST',
+					headers: {
+						'Content-Type': 'application/json'
+					},
+					body: JSON.stringify({
+						categoryIds: 'all',
+						nextIds: true
+					})
+				})
+				const data = await response.json()
+				console.log(data)
+				this.categories = data.categories
+				this.nextCategoryId = data.nextCategoryId
+				this.nextItemId = data.nextItemId
+				await Promise.all(
+					this.categories.map(category => this.fetchItems(category.id))
+				)
+
+				this.selectedCategoryId = this.categories[0].id
+				this.loaded = true
+
+			} catch (error) {
+				console.error('Error fetching categories:', error)
+			}
+		},
+		addCategory(category) {
+			category.id = this.nextCategoryId
+			this.categories.push(category)
+			this.nextCategoryId++
+		},
 		addItem(item) {
-			this.items.push(item)
-			this.showAddItemDialog = false
+			const cIndex = this.categories.findIndex(c => c.id === this.selectedCategoryId)
+			if(cIndex !== -1){
+				item.id = this.nextItemId
+				this.categories[cIndex].items.push(item)
+				this.nextItemId++
+			}
 		},
 		deleteItem(item) {
-			this.items = this.items.filter(i => i.creationTime !== item.creationTime)
+			const cIndex = this.categories.findIndex(c => c.id === this.selectedCategoryId)
+			if(cIndex !== -1){
+				this.categories[cIndex].items = this.categories[cIndex].items.filter(i => i.id !== item.id)
+			}
 		}
 	},
 	mounted() {
-		this.fetchItems()
+		this.fetchCategories()
+	},
+	computed: {
+		sortedItems() {
+			if(this.loaded){
+				const cIndex = this.categories.findIndex(c => c.id === this.selectedCategoryId)
+				if(cIndex !== -1){
+					return [...this.categories[cIndex].items].sort((a, b) => {
+						let sortOption = this.selectedSort
+						if(sortOption === 'titleAsc') {
+							return a.title.localeCompare(b.title)
+						} else if(sortOption === 'titleDesc') {
+							return b.title.localeCompare(a.title)
+						}
+					})
+				}
+			}
+			return []
+		},
+		filteredBySearch() {
+			if(this.loaded){
+				return this.sortedItems.filter(item => item.title.toLowerCase().includes(this.searchQuery.toLowerCase()))
+			}
+			return []
+		},
+		simpleCategories() {
+			if(this.loaded){
+				return this.categories.map(category => ({
+					id: category.id,
+					name: category.name,
+						items: category.items.length,
+						removed: category.removed
+					}))
+			}
+			return []
+		}
 	}
 }
 </script>
@@ -63,8 +189,10 @@ export default {
 	--small-border-rad: 5px;
 	--dark-bg-col: #141010;
 	--accent-col: #d4ea9a;
+	--accent-col-hover: #c1debb;
 	--main-text-col: #f4f4df;
 	--secondary-text-col: #888888;
+	--option-bg-col: #242424;
 	--strong-font: 'Montserrat', 'Segoe UI', sans-serif;
 	--main-font: 'Poiret One', 'Segoe UI', sans-serif;
 	--main-font-weight: 500;
@@ -87,8 +215,13 @@ body {
 
 .app{
 	display: flex;
-	flex-direction: column;
+	flex-direction: row;
 	padding: 20px;
+	gap: 20px;
+}
+
+.category-view{
+	flex: 1;
 }
 
 .base-input{
@@ -121,9 +254,43 @@ body {
 	display: flex;
 }
 
-.add-item-button{
-	align-self: flex-end;
+.base-input:hover{
+	background-color: rgba(255, 255, 255, 0.1);
+	cursor: pointer;
+	transition: background-color 0.1s ease;
+}
+
+.top-bar{
+	display: flex;
+	justify-content: space-between;
 	margin-bottom: 20px;
+	align-items: center;
+}
+
+.base-select{
+	padding: 10px;
+	border: 1px solid var(--accent-col);
+	border-radius: var(--small-border-rad);
+	background: none;
+	color: var(--main-text-col);
+	font-family: var(--main-font);
+	font-weight: var(--main-font-weight);
+
+}
+
+.base-select:hover{
+	background-color: rgba(255, 255, 255, 0.1);
+	border-color: var(--accent-col-hover);
+	cursor: pointer;
+	transition: background-color 0.1s ease, border-color 0.1s ease;
+}
+
+button:hover{
+	color: var(--accent-col-hover);
+	background-color: rgba(255, 255, 255, 0.1);
+	border-color: var(--accent-col-hover);
+	cursor: pointer;
+	transition: color 0.1s ease, background-color 0.1s ease, border-color 0.1s ease;
 }
 
 </style>
