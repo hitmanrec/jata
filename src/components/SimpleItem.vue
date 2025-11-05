@@ -16,7 +16,7 @@
 			<div class="description">
 				{{ item.description.substring(0, 100) }}{{ item.description.length > 100 ? '...' : '' }}
 			</div>
-			<div v-if="item.status === 'incomplete' || item.status === 'started'" class="expectation">
+			<div v-if="item.status === 'planned' || item.status === 'started'" class="expectation">
 				Expectation: {{ item.expectation }}
 			</div>
 			<div v-if="item.status === 'complete'|| item.status === 'dropped'" class="rating">

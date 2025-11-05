@@ -4,6 +4,8 @@ import AddItemDialog from "./AddItemDialog.vue";
 import DropDownDynamicSelect from "./DropDownDynamicSelect.vue";
 import CategoryButton from "./CategoryButton.vue";
 import AddCategoryDialog from "./AddCategoryDialog.vue";
+import RadioRow from "./RadioRow.vue";
+import ColoredSlider from "./ColoredSlider.vue";
 
 export default [
 	SmallButton,
@@ -11,5 +13,7 @@ export default [
 	AddItemDialog,
 	DropDownDynamicSelect,
 	CategoryButton,
-	AddCategoryDialog
+	AddCategoryDialog,
+	RadioRow,
+	ColoredSlider
 ]

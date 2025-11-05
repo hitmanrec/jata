@@ -83,7 +83,6 @@ export default {
 					})
 				})
 				const data = await response.json()
-				console.log(data)
 				if(data.categories.length > 0){
 					const cIndex = this.categories.findIndex(c => c.id === categoryId)
 					if(cIndex !== -1){
@@ -107,7 +106,6 @@ export default {
 					})
 				})
 				const data = await response.json()
-				console.log(data)
 				this.categories = data.categories
 				this.nextCategoryId = data.nextCategoryId
 				this.nextItemId = data.nextItemId

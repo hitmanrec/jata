@@ -65,7 +65,7 @@ public:
 				}else{
 					for(int i = 0; i < line.size(); i++){
 						if(line[i] == '-'){
-							status = "incomplete";
+							status = "planned";
 						}else if(line[i] == '+'){
 							status = "complete";
 						}else if(line[i] == '('){
