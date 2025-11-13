@@ -10,24 +10,29 @@
 					{{ item.status }}
 				</div>
 			</div>
-			<div v-if="item.tags.length > 0" class="tags">
-				Tags: {{ item.tags.join(', ') }}
+			<div v-show="item.tags.length > 0" class="tags">
+				Tags: {{ item.tags.join(', ').trim() }}
 			</div>
 			<div class="description">
 				{{ item.description.substring(0, 100) }}{{ item.description.length > 100 ? '...' : '' }}
 			</div>
-			<div v-if="item.status === 'planned' || item.status === 'started'" class="expectation">
+			<div v-if="(item.status === 'planned' || item.status === 'started') && item.expectation !== ''" class="expectation">
 				Expectation: {{ item.expectation }}
 			</div>
 			<div v-if="item.status === 'complete'|| item.status === 'dropped'" class="rating">
-				Rating: {{ item.rating }}
+				Rating: {{ rating_symbols[item.rating] }}
 			</div>
 		</div>
 		<div class="item-btns">
+			<small-button class="edit-button"
+				@click="$emit('update-item', item)"
+			>
+				<i class="fa-solid fa-pencil" alt="edit"></i>
+			</small-button>
 			<small-button class="delete-button"
 				@click="$emit('delete-item', item)"
 			>
-				Delete
+				<i class="fa-solid fa-trash" alt="delete"></i>
 			</small-button>
 		</div>
 	</div>
@@ -35,6 +40,11 @@
 
 <script>
 export default {
+	data() {
+		return {
+			rating_symbols: ['💩', '🤮', '😟','🤔', '😑', '😊', '🤩', '😍', '❤️', '🥵']
+		}
+	},
 	props: {
 		item: {
 			type: Object,
@@ -87,7 +97,9 @@ export default {
 .item-btns{
 	margin-top: 10px;
 	display: flex;
-	flex-direction: column;
-	align-items: flex-end;
+	flex-direction: row;
+	align-items: center;
+	justify-content: flex-end;
+	gap: 10px;
 }
 </style>

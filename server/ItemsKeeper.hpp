@@ -12,25 +12,35 @@ class FileManager {
 private:
 	std::string filePath;
 public:
-	FileManager(const std::string& filePath) : filePath(filePath) {}
+	FileManager(const std::string& _filePath) : filePath(_filePath) {}
 
 	json loadJson() {
 		std::ifstream inputFile(filePath);
 		if(inputFile.is_open()){
+			try{
 			json data;
-			inputFile >> data;
-			inputFile.close();
-			return data;
+				inputFile >> data;
+				inputFile.close();
+				return data;
+			}catch(const std::exception& e){
+				std::cerr << "Error reading from file: " << e.what() << std::endl;
+				return json::parse("[]");
+			}
 		}
 		return json::parse("[]");
 	}
 
 	int writeJson(const json& data, std::string outputFilePath = "") {
-		std::ofstream outputFile(outputFilePath.empty() ? filePath : outputFilePath);
+		std::ofstream outputFile(outputFilePath.empty() || outputFilePath == "" ? filePath : outputFilePath);
 		if(outputFile.is_open()){
-			outputFile << data.dump(2);
-			outputFile.close();
-			return 0;
+			try{
+				outputFile << data.dump(2);
+				outputFile.close();
+				return 0;
+			}catch(const std::exception& e){
+				std::cerr << "Error writing to file: " << e.what() << std::endl;
+				return -1;
+			}
 		}
 		return -1;
 	}
@@ -127,12 +137,15 @@ struct Category {
 		return data;
 	}
 
-	void fromJson(const json& data) {
+	void fromJson(const json& data, int debugLevel = 0) {
 		this->id = (unsigned int)data["id"];
 		this->name = data["name"];
 		this->items = std::unordered_map<unsigned int, Item>();
-		for (const auto& item : data["items"]) {
-			items.insert(std::make_pair((unsigned int)item["id"], Item(item)));
+
+		if(data.contains("items")){
+			for (const auto& item : data["items"]) {
+				items.insert(std::make_pair((unsigned int)item["id"], Item(item)));
+			}
 		}
 		this->removed = (bool)data["removed"];
 	}
@@ -158,9 +171,6 @@ public:
 
 	json get(json request){
 		json response;
-		if(debugLevel >= 3){
-			std::cout << "request: " << request.dump(2) << std::endl;
-		}
 		if(request.contains("categoryIds")){
 			response["categories"] = json::array();
 			if(request["categoryIds"] == "all"){
@@ -190,12 +200,101 @@ public:
 			response["nextCategoryId"] = nextCategoryId;
 			response["nextItemId"] = nextItemId;
 		}
-		if(debugLevel >= 3){
-			std::cout << "response: " << response.dump(2) << std::endl;
-		}
-		
 		return response;
 
+	}
+
+	json addCategory(json request){
+		json response;
+		Category c;
+		try{
+			c.fromJson(request["category"]);
+			if(request["nextCategoryId"] != nextCategoryId){
+				nextCategoryId = request["nextCategoryId"].get<unsigned int>();
+			}
+			categories.insert(std::make_pair(c.id, c));
+			response["categories"] = json::array();
+			for(const auto& category : categories){
+				response["categories"].push_back({
+					{"id", category.second.id}, 
+					{"name", category.second.name},
+					{"items", json::array()},
+					{"removed", category.second.removed}
+				});
+			}
+			WriteJsonFull();
+			return response;
+		}catch(const std::exception& e){
+			std::cerr << "Error adding category: " << e.what() << std::endl;
+			response["error"] = e.what();
+			return response;
+		}
+	}
+
+	json removeCategory(json request){
+		json response;
+		int categoryId = request["categoryId"];
+		try{
+			categories[categoryId].removed = true;
+			response["categories"] = json::array();
+			for(const auto& category : categories){
+				response["categories"].push_back({
+					{"id", category.second.id}, 
+					{"name", category.second.name},
+					{"items", json::array()},
+					{"removed", category.second.removed}
+				});
+			}
+			WriteJsonFull();
+			return response;
+		}
+		catch(const std::exception& e){
+			std::cerr << "Error removing category: " << e.what() << std::endl;
+			response["error"] = e.what();
+			return response;
+		}
+	}
+
+	json addItem(json request){
+		json response;
+		Item i;
+		i.fromJson(request["item"]);
+		if(request["nextItemId"] != nextItemId){
+			nextItemId = request["nextItemId"];
+		}
+		categories[request["categoryId"]].items.insert(std::make_pair(request["item"]["id"], i));
+		response["categories"] = json::array();
+		response["categories"].push_back(categories[request["categoryId"]].toJson());
+		WriteJsonFull();
+		return response;
+	}
+
+	json updateCategory(json request){
+		json response;
+		Category c;
+		c.fromJson(request["category"]);
+		if(request["nextCategoryId"] != nextCategoryId){
+			nextCategoryId = request["nextCategoryId"];
+		}
+		categories[c.id] = c;
+		response["categories"] = json::array();
+		response["categories"].push_back(categories[c.id].toJson());
+		WriteJsonFull();
+		return response;
+	}
+
+	json updateItem(json request){
+		json response;
+		Item i;
+		i.fromJson(request["item"]);
+		if(request["nextItemId"] != nextItemId){
+			nextItemId = request["nextItemId"];
+		}
+		categories[request["categoryId"]].items[i.getId()] = i;
+		response["categories"] = json::array();
+		response["categories"].push_back(categories[request["categoryId"]].toJson());
+		WriteJsonFull();
+		return response;
 	}
 
 	int LoadJsonFull() {
@@ -204,7 +303,7 @@ public:
 		nextItemId = data["nextItemId"];
 		for(const auto& category : data["categories"]){
 			Category c;
-			c.fromJson(category);
+			c.fromJson(category, debugLevel);
 			categories.insert(std::make_pair(c.id, c));
 		}
 		return 0;
@@ -218,7 +317,6 @@ public:
 		for(const auto& category : categories){
 			data["categories"].push_back(category.second.toJson());
 		}
-		
 		return fm.writeJson(data, outputFilePath);
 	}
 

@@ -18,7 +18,9 @@
 				class="colored-slider__tick"
 				:style="{ left: `${((mark - minValue) / (maxValue - minValue)) * 100}%` }"
 			>
-				{{ mark }}
+			<span :style="{ opacity:  mark > sliderValue && mark > 0 && mark < tickMarks.length - 1 ? 1 : 0 }" class="colored-slider__tick-symbol">♦</span>
+			<span class="colored-slider__tick-number">{{ mark }}</span>
+
 			</span>
       	</div>
 		</div>
@@ -55,15 +57,18 @@ export default {
 	watch: {
 		currentValue(newVal) {
 			this.sliderValue = newVal
+		},
+		sliderValue(newVal) {
+			this.$emit('update:currentValue', newVal)
 		}
 	},
 	computed: {
 		tickMarks() {
-		const marks = [];
-		const interval = 1;
-		for (let value = this.minValue; value <= this.maxValue; value += interval) {
-			marks.push(value);
-		}
+			const marks = [];
+			const interval = 1;
+			for (let value = this.minValue; value <= this.maxValue; value += interval) {
+				marks.push(value);
+			}
 			return marks;	
 		}
 	}
@@ -80,7 +85,7 @@ export default {
 	-webkit-appearance: none; 
 	appearance: none;
 	background: transparent;
-	height: 10px;
+	height: 11px;
 	border-radius: 5px;
 	border: 1px solid var(--accent-col);
 }
@@ -92,13 +97,18 @@ export default {
 .colored-slider__ticks {
   pointer-events: none;
   font-size: 0.8em;
-  color: rgba(255, 255, 255, 0.5);
+
+  opacity: 0.7;
 }
 
 .colored-slider__tick {
   position: absolute;
   background: none;
-  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  transform: translate(-50%, -59%);
+
 }
 
 /* The slider handle (use -webkit- (Chrome, Opera, Safari, Edge) and -moz- (Firefox) to override default look) */
@@ -122,5 +132,6 @@ export default {
 	background: var(--accent-col);
 	height: 100%;
 	border-radius: var(--small-border-rad);
+	transition: background 0.2s ease, width 0.2s ease;
 }
 </style>

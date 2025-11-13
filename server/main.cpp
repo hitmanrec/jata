@@ -19,10 +19,24 @@ const std::string DEFAULT_STORAGE = "test_save.json";
 
 int main(int argc, char* argv[]) {
     std::string inputFile = DEFAULT_STORAGE;
+    std::string outputFile  = DEFAULT_STORAGE;
+    int debugLevel = 0;
     if(argc > 1){
-        inputFile = argv[1];
+        for(int i = 1; i < argc; i++){
+            if(strcmp(argv[i], "--debug") == 0){
+                debugLevel = 3;
+            }
+            if(strcmp(argv[i], "--input") == 0){
+                inputFile = argv[i+1];
+                i++;
+            }
+            if(strcmp(argv[i], "--output") == 0){
+                outputFile = argv[i+1];
+                i++;
+            }
+        }
     }
-    std::string outputFile = argc > 2 ? argv[2] : inputFile.substr(0, inputFile.find_last_of('.')) + ".json";
+    
     
     ItemsKeeper ik(inputFile);
     
@@ -51,6 +65,63 @@ int main(int argc, char* argv[]) {
         }
     });
 
+    svr.Post("/api/categories/add", [&ik](const httplib::Request& req, httplib::Response& res) {
+        try {
+            json response;
+            response = ik.addCategory(json::parse(req.body));
+            res.set_content(response.dump(), "application/json");
+        } catch (const std::exception& e) {
+            res.status = 500;
+            res.set_content(json({{"error", e.what()}}).dump(), "application/json");
+        }
+    });
+
+    svr.Post("/api/categories/update", [&ik](const httplib::Request& req, httplib::Response& res) {
+
+        try {
+            json response;
+            response = ik.updateCategory(json::parse(req.body));
+            res.set_content(response.dump(), "application/json");
+        } catch (const std::exception& e) {
+            res.status = 500;
+            res.set_content(json({{"error", e.what()}}).dump(), "application/json");
+        }
+    });
+
+    svr.Post("/api/categories/delete", [&ik](const httplib::Request& req, httplib::Response& res) {
+        try {
+            json response;
+            response = ik.removeCategory(json::parse(req.body));
+            res.set_content(response.dump(), "application/json");
+        } catch (const std::exception& e) {
+            res.status = 500;
+            res.set_content(json({{"error", e.what()}}).dump(), "application/json");
+        }
+    });
+
+    svr.Post("/api/items/add", [&ik](const httplib::Request& req, httplib::Response& res) {
+        try {
+            json response;
+            response = ik.addItem(json::parse(req.body));
+            res.set_content(response.dump(), "application/json");
+        } catch (const std::exception& e) {
+            res.status = 500;
+            res.set_content(json({{"error", e.what()}}).dump(), "application/json");
+        }
+    });
+
+    svr.Post("/api/items/update", [&ik](const httplib::Request& req, httplib::Response& res) {
+
+        try {
+            json response;
+            response = ik.updateItem(json::parse(req.body));
+            res.set_content(response.dump(), "application/json");
+        } catch (const std::exception& e) {
+            res.status = 500;
+            res.set_content(json({{"error", e.what()}}).dump(), "application/json");
+        }
+    });
+    
     std::cout << "Server started at http://localhost:8081" << std::endl;
     svr.listen("0.0.0.0", 8081);
     

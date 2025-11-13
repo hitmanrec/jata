@@ -7,6 +7,7 @@
 			:selectedCategoryId="selectedCategoryId"
 			@select-category="selectedCategoryId = $event"
 			@add-category="addCategory"
+			@delete-category="deleteCategory"
 		 />
 
 		<!-- CATEGORY VIEW -->
@@ -28,6 +29,7 @@
 				:category="categories.find(c => c.id === selectedCategoryId)"
 				@delete-item="deleteItem"
 				@add-item="addItem"
+				@update-item="updateItem"
 			/>
 			
 		</div>
@@ -120,17 +122,65 @@ export default {
 				console.error('Error fetching categories:', error)
 			}
 		},
-		addCategory(category) {
+		async addCategory(category) {
 			category.id = this.nextCategoryId
 			this.categories.push(category)
 			this.nextCategoryId++
+			const response = await fetch(`${this.serverUrl}/api/categories/add`, {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json'
+				},
+				body: JSON.stringify({
+					category: {
+						id: category.id,
+						name: category.name,
+						items: [],
+						removed: category.removed
+					},
+					nextCategoryId: this.nextCategoryId
+				})
+			})
+			const data = await response.json()
+			if(data.categories.length > 0){
+				const cIndex = this.categories.findIndex(c => c.id === data.categories[0].id)
+				if(cIndex !== -1){
+					this.categories[cIndex].id = data.categories[0].id
+					this.categories[cIndex].name = data.categories[0].name
+					this.categories[cIndex].removed = data.categories[0].removed
+				}
+			}
 		},
-		addItem(item) {
+		async addItem(item) {
 			const cIndex = this.categories.findIndex(c => c.id === this.selectedCategoryId)
 			if(cIndex !== -1){
 				item.id = this.nextItemId
 				this.categories[cIndex].items.push(item)
 				this.nextItemId++
+				const response = await fetch(`${this.serverUrl}/api/items/add`, {
+					method: 'POST',
+					headers: {
+						'Content-Type': 'application/json'
+					},
+					body: JSON.stringify({
+						categoryId: this.selectedCategoryId,
+						item: item,
+						nextItemId: this.nextItemId
+					})
+				})
+				const data = await response.json()
+				if(data.categories.length > 0){
+					const cIndex = this.categories.findIndex(c => c.id === this.selectedCategoryId)
+					if(cIndex !== -1){
+						this.categories[cIndex] = data.categories[0]
+					}
+				}
+			}
+		},
+		updateItem(item) {
+			const cIndex = this.categories.findIndex(c => c.id === this.selectedCategoryId)
+			if(cIndex !== -1){
+				this.categories[cIndex].items = this.categories[cIndex].items.map(i => i.id === item.id ? item : i)
 			}
 		},
 		deleteItem(item) {
@@ -138,6 +188,30 @@ export default {
 			if(cIndex !== -1){
 				this.categories[cIndex].items = this.categories[cIndex].items.filter(i => i.id !== item.id)
 			}
+		},
+		async deleteCategory(category) {
+			const response = await fetch(`${this.serverUrl}/api/categories/delete`, {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json'
+				},
+				body: JSON.stringify({
+					categoryId: category.id
+				})
+			})
+			const data = await response.json()
+			if(data.categories.length > 0){
+				const cIndex = this.categories.findIndex(c => c.id === data.categories[0].id)
+				if(cIndex !== -1){
+					this.categories[cIndex] = {
+						id: data.categories[0].id,
+						name: data.categories[0].name,
+						items: this.categories[cIndex].items,
+						removed: data.categories[0].removed
+					}
+				}
+			}
+			this.selectedCategoryId = this.categories[this.categories.findIndex(c => !c.removed)].id
 		}
 	},
 	mounted() {
@@ -194,6 +268,10 @@ export default {
 	--strong-font: 'Montserrat', 'Segoe UI', sans-serif;
 	--main-font: 'Poiret One', 'Segoe UI', sans-serif;
 	--main-font-weight: 500;
+	--planned-col: #784e92;
+	--started-col: #5f68a0;
+	--complete-col: #378182;
+	--dropped-col: #96723d;
 }
 
 

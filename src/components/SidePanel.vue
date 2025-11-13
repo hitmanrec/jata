@@ -6,9 +6,14 @@
 		<div class="category-list">
 			<div class="category-list-header">
 				<h4>Categories</h4>
-				<category-button class="category-add" @click="showAddCategoryDialog">
+				<div class="category-list-header-buttons">
+					<category-button class="category-add" @click="showAddCategoryDialog">
 					+ Add
-				</category-button>
+					</category-button>
+					<category-button class="category-delete" @click="deleteCategory">
+						<i class="fa-solid fa-trash" alt="delete"></i>
+					</category-button>
+				</div>
 			</div>
 			<category-button 
 				v-for="category in categories"
@@ -58,6 +63,17 @@ export default {
 			category.items = []
 			this.$emit('add-category', category)
 			this.AddCategoryDialogVisible = false
+		},
+		deleteCategory() {
+			const selectedCategory = this.categories.find(c => c.id === this.selectedCategoryId)
+			if (!selectedCategory) {
+				return
+			}
+			
+			const confirmed = window.confirm(`Are you sure you want to delete the category "${selectedCategory.name}"?`)
+			if (confirmed) {
+				this.$emit('delete-category', selectedCategory)
+			}
 		}
 	}
 };
@@ -112,6 +128,16 @@ export default {
 
 }
 
+.category-delete{
+	display: flex;
+	width: auto !important;
+	align-self: flex-end;
+	text-align: center;
+	display: block;
+	padding-bottom: 10px;
+	color: var(--secondary-text-col);
+}
+
 .selected-category{
 	width: 100%;
 }
@@ -119,8 +145,16 @@ export default {
 .category-list-header{
 	display: flex;
 	flex-direction: row;
-	justify-content: space-between;
 	align-items: center;
+	justify-content: space-between;
 	margin-bottom: 10px;
+}
+
+.category-list-header-buttons{
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+	justify-content: flex-end;
+	gap: 10px;
 }
 </style>

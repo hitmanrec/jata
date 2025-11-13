@@ -4,6 +4,7 @@
 		v-for="(option, index) in possibleValues"
 		:key="option"
 		class="radio-pill"
+		:style="colorPalette.length > 1 ? { '--pill-color': colorPalette[index % colorPalette.length] } :  { '--pill-color': colorPalette[0] }"
 		:class="{ 'radio-pill--active': option === selectedValue,
 			'radio-pill--first': possibleValues.length > 1 && index === 0,
 			'radio-pill--middle': possibleValues.length > 1 && index !== 0 && index !== possibleValues.length - 1,
@@ -32,6 +33,10 @@ export default {
 		currentValue: {
 			type: String,
 			default: ''
+		},
+		colorPalette: {
+			type: Array,
+			default: () => []
 		}
 	},
 	data() {
@@ -80,7 +85,7 @@ export default {
 }
 
 .radio-pill--active {
-  background: var(--accent-col);
+  background: var(--pill-color);
   color: var(--dark-bg-col);
 }
 

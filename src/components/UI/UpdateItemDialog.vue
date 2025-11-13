@@ -8,7 +8,7 @@
 
 <script>
 export default {
-	name: 'add-item-dialog',
+	name: 'update-item-dialog',
 	props: {
 		show: {
 			type: Boolean,
