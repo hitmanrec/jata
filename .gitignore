@@ -2,6 +2,30 @@
 node_modules
 /dist
 
+# C++ build artifacts
+*.obj
+*.o
+*.a
+*.dll
+*.so
+*.dylib
+*.exe
+
+# Windows-specific files
+Thumbs.db
+desktop.ini
+*.lnk
+
+# Environment files
+.env
+
+# Cache and temporary
+.cache/
+coverage/
+.vue-cli-service/
+
+# General log files
+*.log
 
 # local env files
 .env.local
@@ -21,7 +45,13 @@ pnpm-debug.log*
 *.njsproj
 *.sln
 *.sw?
+
+
+server/test_save_copy.json
 server/jata_server.exe
 server/sample_input.txt
 server/test_save.json
 server/test.json
+sample_input.json
+pnpm-lock.yaml
+

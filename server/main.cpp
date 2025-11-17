@@ -121,6 +121,17 @@ int main(int argc, char* argv[]) {
             res.set_content(json({{"error", e.what()}}).dump(), "application/json");
         }
     });
+
+    svr.Post("/api/items/delete", [&ik](const httplib::Request& req, httplib::Response& res) {
+        try {
+            json response;
+            response = ik.deleteItem(json::parse(req.body));
+            res.set_content(response.dump(), "application/json");
+        } catch (const std::exception& e) {
+            res.status = 500;
+            res.set_content(json({{"error", e.what()}}).dump(), "application/json");
+        }
+    });
     
     std::cout << "Server started at http://localhost:8081" << std::endl;
     svr.listen("0.0.0.0", 8081);

@@ -171,10 +171,14 @@ public:
 
 	json get(json request){
 		json response;
+		bool getRemoved = request.contains("removed") && request["removed"];
 		if(request.contains("categoryIds")){
 			response["categories"] = json::array();
 			if(request["categoryIds"] == "all"){
 				for(const auto& category : categories){
+					if(!getRemoved && category.second.removed){
+						continue;
+					}
 					response["categories"].push_back({
 						{"id", category.second.id}, 
 						{"name", category.second.name}, 
@@ -183,7 +187,9 @@ public:
 				}
 			}else{
 				for(const auto& categoryId : request["categoryIds"]){
-					
+					if(!getRemoved && categories[categoryId].removed){
+						continue;
+					}
 					if(request.contains("withItems") && request["withItems"]){
 						response["categories"].push_back(categories[categoryId].toJson());
 					}else{
@@ -213,19 +219,34 @@ public:
 				nextCategoryId = request["nextCategoryId"].get<unsigned int>();
 			}
 			categories.insert(std::make_pair(c.id, c));
-			response["categories"] = json::array();
-			for(const auto& category : categories){
-				response["categories"].push_back({
-					{"id", category.second.id}, 
-					{"name", category.second.name},
-					{"items", json::array()},
-					{"removed", category.second.removed}
-				});
-			}
 			WriteJsonFull();
+			response["category"] = json::object({
+				{"id", c.id},
+				{"name", c.name}
+			});
+			response["nextCategoryId"] = nextCategoryId;
 			return response;
 		}catch(const std::exception& e){
 			std::cerr << "Error adding category: " << e.what() << std::endl;
+			response["error"] = e.what();
+			return response;
+		}
+	}
+
+	json updateCategory(json request){
+		json response;
+		Category c;
+		try{
+			c.fromJson(json::object({{"id", request["category"]["id"]}, {"name", request["category"]["name"]}, {"removed", false}, {"items", json::array()}}));
+			categories[c.id].name = c.name;
+			WriteJsonFull();
+			response["category"] = json::object({
+				{"id", c.id},
+				{"name", c.name}
+			});
+			return response;
+		}catch(const std::exception& e){
+			std::cerr << "Error updating category: " << e.what() << std::endl;
 			response["error"] = e.what();
 			return response;
 		}
@@ -235,16 +256,16 @@ public:
 		json response;
 		int categoryId = request["categoryId"];
 		try{
-			categories[categoryId].removed = true;
-			response["categories"] = json::array();
-			for(const auto& category : categories){
-				response["categories"].push_back({
-					{"id", category.second.id}, 
-					{"name", category.second.name},
-					{"items", json::array()},
-					{"removed", category.second.removed}
-				});
+			if(categories.find(categoryId) != categories.end()){
+				categories[categoryId].removed = true;
+			}else{
+				throw std::runtime_error("Category not found");
 			}
+			response["category"] = json::object({
+				{"id", categoryId},
+				{"name", categories[categoryId].name},
+				{"removed", categories[categoryId].removed}
+			});
 			WriteJsonFull();
 			return response;
 		}
@@ -257,44 +278,61 @@ public:
 
 	json addItem(json request){
 		json response;
-		Item i;
-		i.fromJson(request["item"]);
-		if(request["nextItemId"] != nextItemId){
-			nextItemId = request["nextItemId"];
+		try{
+			Item i;
+			i.fromJson(request["item"]);
+			if(request["nextItemId"] != nextItemId){
+				nextItemId = request["nextItemId"].get<unsigned int>();
+			}
+			categories[request["categoryId"]].items.insert(std::make_pair(request["item"]["id"], i));
+			response["categoryId"] = request["categoryId"];
+			WriteJsonFull();
+			response["item"] = i.toJson();
+			response["nextItemId"] = nextItemId;
+			return response;
+		}catch(const std::exception& e){
+			std::cerr << "Error adding item: " << e.what() << std::endl;
+			response["error"] = e.what();
+			return response;
 		}
-		categories[request["categoryId"]].items.insert(std::make_pair(request["item"]["id"], i));
-		response["categories"] = json::array();
-		response["categories"].push_back(categories[request["categoryId"]].toJson());
-		WriteJsonFull();
-		return response;
-	}
-
-	json updateCategory(json request){
-		json response;
-		Category c;
-		c.fromJson(request["category"]);
-		if(request["nextCategoryId"] != nextCategoryId){
-			nextCategoryId = request["nextCategoryId"];
-		}
-		categories[c.id] = c;
-		response["categories"] = json::array();
-		response["categories"].push_back(categories[c.id].toJson());
-		WriteJsonFull();
-		return response;
 	}
 
 	json updateItem(json request){
 		json response;
-		Item i;
-		i.fromJson(request["item"]);
-		if(request["nextItemId"] != nextItemId){
-			nextItemId = request["nextItemId"];
+		int categoryId = request["categoryId"];
+		try {
+			Item i;
+			i.fromJson(request["item"]);
+			categories[categoryId].items[i.getId()] = i;
+			response["categoryId"] = categoryId;
+			WriteJsonFull();
+			response["item"] = i.toJson();
+			return response;
+		} catch(const std::exception& e){
+			std::cerr << "Error updating item: " << e.what() << std::endl;
+			response["error"] = e.what();
+			return response;
 		}
-		categories[request["categoryId"]].items[i.getId()] = i;
-		response["categories"] = json::array();
-		response["categories"].push_back(categories[request["categoryId"]].toJson());
-		WriteJsonFull();
-		return response;
+	}
+
+	json deleteItem(json request){
+		json response;
+		int categoryId = request["categoryId"];
+		int itemId = request["itemId"];
+		try{
+			if(categories[categoryId].items.find(itemId) != categories[categoryId].items.end()){
+				categories[categoryId].items[itemId].remove();
+			}else{
+				throw std::runtime_error("Item not found");
+			}
+			WriteJsonFull();
+			response["itemId"] = itemId;
+			return response;
+		}catch(const std::exception& e){
+			std::cerr << "Error deleting item: " << e.what() << std::endl;
+			response["error"] = e.what();
+			return response;
+		}
 	}
 
 	int LoadJsonFull() {

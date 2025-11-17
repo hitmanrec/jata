@@ -1,18 +1,25 @@
 <template>
 	<div class="base-dialog" v-if="show" @click="closeDialog">
 		<div @click.stop class="dialog-content">
-			<slot></slot>
+			<slot :actionType="actionType" :category="category"></slot>
 		</div>
 	</div>
 </template>
 
 <script>
 export default {
-	name: 'add-category-dialog',
+	name: 'update-category-dialog',
 	props: {
 		show: {
 			type: Boolean,
 			required: true
+		},
+		actionType: {
+			type: String,
+			required: true
+		},
+		category: {
+			type: Object
 		}
 	},
 	methods: {

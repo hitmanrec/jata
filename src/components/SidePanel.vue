@@ -1,14 +1,17 @@
 <template>
 	<div class="side-panel">
-		<add-category-dialog v-model:show="AddCategoryDialogVisible">
-			<add-category-form @add-category="addCategory" />
-		</add-category-dialog>
+		<update-category-dialog v-model:show="UpdateCategoryDialogVisible">
+			<update-category-form @add-category="addCategory" @update-category="updateCategory" :actionType="actionType" :category="category" />
+		</update-category-dialog>
 		<div class="category-list">
 			<div class="category-list-header">
 				<h4>Categories</h4>
 				<div class="category-list-header-buttons">
 					<category-button class="category-add" @click="showAddCategoryDialog">
-					+ Add
+						<i class="fa-solid fa-plus" alt="add"></i>
+					</category-button>
+					<category-button class="category-edit" @click="showUpdateCategoryDialog">
+						<i class="fa-solid fa-pencil" alt="edit"></i>
 					</category-button>
 					<category-button class="category-delete" @click="deleteCategory">
 						<i class="fa-solid fa-trash" alt="delete"></i>
@@ -25,22 +28,24 @@
 				@click="selectCategory(category.id)"
 			>
 				<span class="category-name">{{ category.name }}</span>
-				<span v-show="category.items > 0" class="category-items">{{ category.items }}</span>
+				<span class="category-items">{{ category.items }}</span>
 			</category-button>
 		</div>
 	</div>
 </template>
 
 <script>
-import AddCategoryForm from '@/components/AddCategoryForm'
+import UpdateCategoryForm from '@/components/UpdateCategoryForm'
 export default {
 	components: {
-		AddCategoryForm
+		UpdateCategoryForm
 	},
 	name: 'side-panel',
 	data() {
 		return {
-			AddCategoryDialogVisible: false
+			UpdateCategoryDialogVisible: false,
+			actionType: 'add',
+			category: {}
 		}
 	},
 	props: {
@@ -57,12 +62,23 @@ export default {
 			this.$emit('select-category', categoryId)
 		},
 		showAddCategoryDialog() {
-			this.AddCategoryDialogVisible = true
+			this.actionType = 'add'
+			this.category = {name: '', items: [], removed: false}
+			this.UpdateCategoryDialogVisible = true
+		},
+		showUpdateCategoryDialog() {
+			this.actionType = 'update'
+			this.category = this.categories.find(c => c.id === this.selectedCategoryId)
+			this.UpdateCategoryDialogVisible = true
 		},
 		addCategory(category) {
 			category.items = []
 			this.$emit('add-category', category)
-			this.AddCategoryDialogVisible = false
+			this.UpdateCategoryDialogVisible = false
+		},
+		updateCategory(category) {
+			this.$emit('update-category', category)
+			this.UpdateCategoryDialogVisible = false
 		},
 		deleteCategory() {
 			const selectedCategory = this.categories.find(c => c.id === this.selectedCategoryId)
@@ -98,6 +114,8 @@ export default {
 	display: flex;
 	align-self: flex-end;
 	width: 90%;
+	height: 100%;
+	text-align: center;
 	justify-content: space-between;
 	align-items: center;
 	padding: 10px;
@@ -118,26 +136,6 @@ export default {
 	cursor: pointer;
 }
 
-.category-add {
-	display: flex;
-	width: auto !important;
-	align-self: flex-end;
-	text-align: center;
-	display: block;
-	padding-bottom: 10px;
-
-}
-
-.category-delete{
-	display: flex;
-	width: auto !important;
-	align-self: flex-end;
-	text-align: center;
-	display: block;
-	padding-bottom: 10px;
-	color: var(--secondary-text-col);
-}
-
 .selected-category{
 	width: 100%;
 }
@@ -148,6 +146,7 @@ export default {
 	align-items: center;
 	justify-content: space-between;
 	margin-bottom: 10px;
+	padding-bottom: 10px;
 }
 
 .category-list-header-buttons{

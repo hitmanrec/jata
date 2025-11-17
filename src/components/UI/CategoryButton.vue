@@ -10,7 +10,7 @@ export default {
 	props: {
 		category: {
 			type: Object,
-			required: true
+			default: () => ({name: '', id: 0, removed: false})
 		}
 	}
 };

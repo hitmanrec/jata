@@ -56,11 +56,11 @@ export default {
 	},
 	methods: {
 		addItem(item) {
-			this.$emit('add-item', item)
+			this.$emit('add-item', item, this.category.id)
 			this.UpdateItemDialogVisible = false
 		},
 		updateItemProvide(item) {
-			this.$emit('update-item', item)
+			this.$emit('update-item', item, this.category.id)
 			this.UpdateItemDialogVisible = false
 		},
 		updateItemRecieve(item) {

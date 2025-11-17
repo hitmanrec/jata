@@ -7,6 +7,7 @@
 			:selectedCategoryId="selectedCategoryId"
 			@select-category="selectedCategoryId = $event"
 			@add-category="addCategory"
+			@update-category="updateCategory"
 			@delete-category="deleteCategory"
 		 />
 
@@ -40,6 +41,7 @@
 <script>
 import ItemList from '@/components/ItemList'
 import SidePanel from '@/components/SidePanel'
+import { categoryAPI, itemAPI } from '@/services/api'
 
 export default {
 	components: {
@@ -71,46 +73,26 @@ export default {
 	methods: {
 		async fetchItems(categoryId) {
 			try {
-				const requestOptions = {
-					categoryIds: [categoryId],
-					withItems: true
-				}
-				const response = await fetch(`${this.serverUrl}/api/categories`, {
-					method: 'POST',
-					headers: {
-						'Content-Type': 'application/json'
-					},
-					body: JSON.stringify({
-						...requestOptions
-					})
-				})
-				const data = await response.json()
-				if(data.categories.length > 0){
+				const itemsData = await categoryAPI.getCategoriesByIds([categoryId])
+				if(itemsData.categories.length > 0){
 					const cIndex = this.categories.findIndex(c => c.id === categoryId)
 					if(cIndex !== -1){
-						this.categories[cIndex] = data.categories[0]
+						this.categories[cIndex] = itemsData.categories[0]
 					}
 				}
 			} catch (error) {
 				console.error('Error fetching items:', error)
+
+				alert('Failed to fetch items. Please try again later.')
 			}
 		},
 		async fetchCategories() {
 			try {
-				const response = await fetch(`${this.serverUrl}/api/categories`, {
-					method: 'POST',
-					headers: {
-						'Content-Type': 'application/json'
-					},
-					body: JSON.stringify({
-						categoryIds: 'all',
-						nextIds: true
-					})
-				})
-				const data = await response.json()
-				this.categories = data.categories
-				this.nextCategoryId = data.nextCategoryId
-				this.nextItemId = data.nextItemId
+				const CategoriesData = await categoryAPI.getAllCategories(true)
+
+				this.categories = CategoriesData.categories
+				this.nextCategoryId = CategoriesData.nextCategoryId
+
 				await Promise.all(
 					this.categories.map(category => this.fetchItems(category.id))
 				)
@@ -120,98 +102,119 @@ export default {
 
 			} catch (error) {
 				console.error('Error fetching categories:', error)
+
+				alert('Failed to fetch categories. Please try again later.')
 			}
 		},
 		async addCategory(category) {
-			category.id = this.nextCategoryId
-			this.categories.push(category)
-			this.nextCategoryId++
-			const response = await fetch(`${this.serverUrl}/api/categories/add`, {
-				method: 'POST',
-				headers: {
-					'Content-Type': 'application/json'
-				},
-				body: JSON.stringify({
-					category: {
-						id: category.id,
-						name: category.name,
-						items: [],
-						removed: category.removed
-					},
-					nextCategoryId: this.nextCategoryId
-				})
-			})
-			const data = await response.json()
-			if(data.categories.length > 0){
-				const cIndex = this.categories.findIndex(c => c.id === data.categories[0].id)
-				if(cIndex !== -1){
-					this.categories[cIndex].id = data.categories[0].id
-					this.categories[cIndex].name = data.categories[0].name
-					this.categories[cIndex].removed = data.categories[0].removed
+			try {
+				category.id = this.nextCategoryId
+				this.nextCategoryId++
+				this.categories.push(category)
+				
+				const newCategoryData = await categoryAPI.addCategory({id: category.id, name: category.name, removed: category.removed}, this.nextCategoryId)
+
+				if(newCategoryData.category){
+					const cIndex = this.categories.findIndex(c => c.id === newCategoryData.category.id)
+					if(cIndex !== -1){
+						this.categories[cIndex] = {
+							id: this.categories[cIndex].id,
+							name: newCategoryData.category.name,
+							removed: false,
+							items: this.categories[cIndex].items
+						}
+					}
+					this.selectedCategoryId = this.categories[cIndex].id
+					this.nextCategoryId = newCategoryData.nextCategoryId
 				}
+			} catch (error) {
+				console.error('Error adding category:', error)
+				alert('Failed to update category. Please try again later.')
 			}
 		},
-		async addItem(item) {
-			const cIndex = this.categories.findIndex(c => c.id === this.selectedCategoryId)
-			if(cIndex !== -1){
-				item.id = this.nextItemId
-				this.categories[cIndex].items.push(item)
-				this.nextItemId++
-				const response = await fetch(`${this.serverUrl}/api/items/add`, {
-					method: 'POST',
-					headers: {
-						'Content-Type': 'application/json'
-					},
-					body: JSON.stringify({
-						categoryId: this.selectedCategoryId,
-						item: item,
-						nextItemId: this.nextItemId
-					})
-				})
-				const data = await response.json()
-				if(data.categories.length > 0){
-					const cIndex = this.categories.findIndex(c => c.id === this.selectedCategoryId)
+		async updateCategory(category) {
+			try {
+				const CategoriesData = await categoryAPI.updateCategory(category)
+				if(CategoriesData.category){
+					const cIndex = this.categories.findIndex(c => c.id === CategoriesData.category.id)
 					if(cIndex !== -1){
-						this.categories[cIndex] = data.categories[0]
+						this.categories[cIndex] = {
+							id: this.categories[cIndex].id,
+							name: CategoriesData.category.name,
+							removed: this.categories[cIndex].removed,
+							items: this.categories[cIndex].items
+						}
 					}
 				}
-			}
-		},
-		updateItem(item) {
-			const cIndex = this.categories.findIndex(c => c.id === this.selectedCategoryId)
-			if(cIndex !== -1){
-				this.categories[cIndex].items = this.categories[cIndex].items.map(i => i.id === item.id ? item : i)
-			}
-		},
-		deleteItem(item) {
-			const cIndex = this.categories.findIndex(c => c.id === this.selectedCategoryId)
-			if(cIndex !== -1){
-				this.categories[cIndex].items = this.categories[cIndex].items.filter(i => i.id !== item.id)
+			} catch (error) {
+				console.error('Error updating category:', error)
+				alert('Failed to update category. Please try again later.')
 			}
 		},
 		async deleteCategory(category) {
-			const response = await fetch(`${this.serverUrl}/api/categories/delete`, {
-				method: 'POST',
-				headers: {
-					'Content-Type': 'application/json'
-				},
-				body: JSON.stringify({
-					categoryId: category.id
-				})
-			})
-			const data = await response.json()
-			if(data.categories.length > 0){
-				const cIndex = this.categories.findIndex(c => c.id === data.categories[0].id)
-				if(cIndex !== -1){
-					this.categories[cIndex] = {
-						id: data.categories[0].id,
-						name: data.categories[0].name,
-						items: this.categories[cIndex].items,
-						removed: data.categories[0].removed
+			try {
+				this.categories[this.categories.findIndex(c => c.id === category.id)].removed = true
+				const CategoriesData = await categoryAPI.deleteCategory(category.id)
+				if(CategoriesData.category){
+					const cIndex = this.categories.findIndex(c => c.id === CategoriesData.category.id)
+					if(cIndex !== -1){
+						this.categories.splice(cIndex, 1)
 					}
 				}
+				this.selectedCategoryId = this.categories[this.categories.findIndex(c => c.id !== CategoriesData.category.id)].id
+			} catch (error) {
+				console.error('Error deleting category:', error)
+				alert('Failed to delete category. Please try again later.')
 			}
-			this.selectedCategoryId = this.categories[this.categories.findIndex(c => !c.removed)].id
+		},
+		async addItem(item, categoryId) {
+			try {
+				item.id = this.nextItemId
+				this.nextItemId++
+				this.categories[this.categories.findIndex(c => c.id === categoryId)].items.push(item)
+				const ItemsData = await itemAPI.addItem(item, categoryId, this.nextItemId)
+				if(ItemsData.item){
+					const cIndex = this.categories.findIndex(c => c.id === ItemsData.categoryId)
+					const iIndex = this.categories[cIndex].items.findIndex(i => i.id === ItemsData.item.id)
+					if(cIndex !== -1 && iIndex !== -1){
+						this.categories[cIndex].items[iIndex] = ItemsData.item
+					}
+					this.nextItemId = ItemsData.nextItemId
+				}
+			} catch (error) {
+				console.error('Error adding item:', error)
+				alert('Failed to add item. Please try again later.')
+			}
+		},
+		async updateItem(item, categoryId) {
+			try {
+				const cIndex = this.categories.findIndex(c => c.id === categoryId)
+				const iIndex = this.categories[cIndex].items.findIndex(i => i.id === item.id)
+				if(cIndex !== -1 && iIndex !== -1){
+					this.categories[cIndex].items[iIndex] = item
+					const ItemsData = await itemAPI.updateItem(item, categoryId, this.nextItemId)
+					if(ItemsData.item){
+						this.categories[cIndex].items[iIndex] = ItemsData.item
+					}
+				}
+			} catch (error) {
+				console.error('Error updating item:', error)
+				alert('Failed to update item. Please try again later.')
+			}
+		},
+		async deleteItem(itemId, categoryId) {
+			try {
+				const cIndex = this.categories.findIndex(c => c.id === categoryId)
+				const iIndex = this.categories[cIndex].items.findIndex(i => i.id === itemId)
+				this.categories[cIndex].items[iIndex].removed = true
+				const ItemsData = await itemAPI.deleteItem(itemId, categoryId)
+				if(ItemsData.itemId){
+					this.categories[cIndex].items.splice(iIndex, 1)
+				}
+			} catch (error) {
+				console.error('Error deleting item:', error)
+				alert('Failed to delete item. Please try again later.')
+			}
 		}
 	},
 	mounted() {
