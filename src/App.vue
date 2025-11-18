@@ -92,6 +92,7 @@ export default {
 
 				this.categories = CategoriesData.categories
 				this.nextCategoryId = CategoriesData.nextCategoryId
+				this.nextItemId = CategoriesData.nextItemId
 
 				await Promise.all(
 					this.categories.map(category => this.fetchItems(category.id))
@@ -202,13 +203,19 @@ export default {
 				alert('Failed to update item. Please try again later.')
 			}
 		},
-		async deleteItem(itemId, categoryId) {
+		async deleteItem(item, categoryId) {
 			try {
+				if(!confirm('Are you sure you want to delete this item?')){
+					return
+				}
+				const itemId = item.id
 				const cIndex = this.categories.findIndex(c => c.id === categoryId)
 				const iIndex = this.categories[cIndex].items.findIndex(i => i.id === itemId)
 				this.categories[cIndex].items[iIndex].removed = true
 				const ItemsData = await itemAPI.deleteItem(itemId, categoryId)
+				console.log(ItemsData)
 				if(ItemsData.itemId){
+					console.log(this.categories[cIndex].items[iIndex].removed)
 					this.categories[cIndex].items.splice(iIndex, 1)
 				}
 			} catch (error) {

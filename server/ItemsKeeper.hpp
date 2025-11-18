@@ -125,12 +125,15 @@ struct Category {
 	unsigned int id;
 	bool removed = false;
 
-	json toJson() const {
+	json toJson(bool getRemoved = false) const {
 		json data;
 		data["id"] = id;
 		data["name"] = name;
 		data["items"] = json::array();
 		for (const auto& item : items) {
+			if(!getRemoved && item.second.isRemoved()){
+				continue;
+			}
 			data["items"].push_back(item.second.toJson());
 		}
 		data["removed"] = removed;
@@ -191,7 +194,7 @@ public:
 						continue;
 					}
 					if(request.contains("withItems") && request["withItems"]){
-						response["categories"].push_back(categories[categoryId].toJson());
+						response["categories"].push_back(categories[categoryId].toJson(getRemoved));
 					}else{
 						response["categories"].push_back({
 							{"id", categoryId},
@@ -326,7 +329,8 @@ public:
 				throw std::runtime_error("Item not found");
 			}
 			WriteJsonFull();
-			response["itemId"] = itemId;
+			response["itemId"] = categories[categoryId].items[itemId].toJson();
+			std::cout << "Item deleted: " << response["itemId"].dump(1) << std::endl;
 			return response;
 		}catch(const std::exception& e){
 			std::cerr << "Error deleting item: " << e.what() << std::endl;

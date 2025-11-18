@@ -19,7 +19,7 @@
 				:item="item"
 				:key="item.id"
 				@update-item="updateItemRecieve($event)"
-				@delete-item="$emit('delete-item', item)"
+				@delete-item="deleteItem(item)"
 				:class="{'planned-item': item.status === 'planned', 'started-item': item.status === 'started', 'complete-item': item.status === 'complete', 'dropped-item': item.status === 'dropped'}"
 			/>		
 		</transition-group>
@@ -67,6 +67,9 @@ export default {
 			this.item_to_update_internal = item
 			this.UpdateItemDialogVisible = true
 			this.actionType = 'update'
+		},
+		deleteItem(item) {
+			this.$emit('delete-item', item, this.category.id)
 		}
 	}
 }

@@ -1,0 +1,1 @@
+g++ -std=c++17 -g -O0 -Wall -Wextra -pthread main.cpp -o debugged_jata_server.exe -lws2_32

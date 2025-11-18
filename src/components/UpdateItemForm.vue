@@ -80,7 +80,8 @@ export default {
 				rating: 0,
 				expectation: 'low',
 				description: '',
-				completionTime: ''
+				completionTime: '',
+				removed: false
 			}
 		}
 	},
@@ -108,7 +109,8 @@ export default {
 				rating: 0,
 				expectation: 'low',
 				description: '',
-				completionTime: ''
+				completionTime: '',
+				removed: false
 			}
 		}
 	},
