@@ -24,7 +24,10 @@ async function apiRequest(endpoint, options = {}) {
 	}
 
 	try {
+		const controller = new AbortController();
+		const timeout = setTimeout(() => controller.abort(), 10000);
 		const response = await fetch(url, config);
+		clearTimeout(timeout);
 
 		if(!response.ok){
 			throw new Error(`HTTP error! status: ${response.status}`);

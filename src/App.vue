@@ -27,7 +27,7 @@
 
 			<item-list
 				:items="filteredBySearch" 
-				:category="categories.find(c => c.id === selectedCategoryId)"
+				:category="categories.find(c => c.id === selectedCategoryId) || {name: '', id: 0, removed: false, items: []}"
 				@delete-item="deleteItem"
 				@add-item="addItem"
 				@update-item="updateItem"
@@ -97,8 +97,11 @@ export default {
 				await Promise.all(
 					this.categories.map(category => this.fetchItems(category.id))
 				)
-
-				this.selectedCategoryId = this.categories[0].id
+				if(this.categories.length > 0){
+					this.selectedCategoryId = this.categories[0].id
+				} else {
+					this.selectedCategoryId = 0
+				}
 				this.loaded = true
 
 			} catch (error) {
@@ -124,8 +127,10 @@ export default {
 							removed: false,
 							items: this.categories[cIndex].items
 						}
+						this.selectedCategoryId = this.categories[cIndex].id
+					} else {
+						this.selectedCategoryId = 0
 					}
-					this.selectedCategoryId = this.categories[cIndex].id
 					this.nextCategoryId = newCategoryData.nextCategoryId
 				}
 			} catch (error) {
@@ -154,15 +159,25 @@ export default {
 		},
 		async deleteCategory(category) {
 			try {
-				this.categories[this.categories.findIndex(c => c.id === category.id)].removed = true
+				const cIndex = this.categories.findIndex(c => c.id === category.id)
+				if(cIndex !== -1){
+					this.categories[cIndex].removed = true
+				} else {
+					throw new Error('Category not found')
+				}
 				const CategoriesData = await categoryAPI.deleteCategory(category.id)
 				if(CategoriesData.category){
-					const cIndex = this.categories.findIndex(c => c.id === CategoriesData.category.id)
-					if(cIndex !== -1){
-						this.categories.splice(cIndex, 1)
+					const cdcIndex = this.categories.findIndex(c => c.id === CategoriesData.category.id)
+					if(cdcIndex !== -1){
+						this.categories.splice(cdcIndex, 1)
 					}
 				}
-				this.selectedCategoryId = this.categories[this.categories.findIndex(c => c.id !== CategoriesData.category.id)].id
+				const scIndex = this.categories.findIndex(c => c.id !== CategoriesData.category.id);
+				if(scIndex !== -1){
+					this.selectedCategoryId = this.categories[scIndex].id
+				} else {
+					this.selectedCategoryId = 0
+				}
 			} catch (error) {
 				console.error('Error deleting category:', error)
 				alert('Failed to delete category. Please try again later.')
@@ -172,13 +187,25 @@ export default {
 			try {
 				item.id = this.nextItemId
 				this.nextItemId++
-				this.categories[this.categories.findIndex(c => c.id === categoryId)].items.push(item)
+				const cIndex = this.categories.findIndex(c => c.id === categoryId)
+				if(cIndex !== -1){
+					this.categories[cIndex].items.push(item)
+				} else {
+					throw new Error('Category not found')
+				}
 				const ItemsData = await itemAPI.addItem(item, categoryId, this.nextItemId)
 				if(ItemsData.item){
-					const cIndex = this.categories.findIndex(c => c.id === ItemsData.categoryId)
-					const iIndex = this.categories[cIndex].items.findIndex(i => i.id === ItemsData.item.id)
-					if(cIndex !== -1 && iIndex !== -1){
-						this.categories[cIndex].items[iIndex] = ItemsData.item
+					const idcIndex = this.categories.findIndex(c => c.id === ItemsData.categoryId)
+					let iIndex = -1;
+					if(idcIndex !== -1){
+						iIndex = this.categories[idcIndex].items.findIndex(i => i.id === ItemsData.item.id)
+					} else {
+						throw new Error('Category not found')
+					}
+					if(idcIndex !== -1 && iIndex !== -1){
+						this.categories[idcIndex].items[iIndex] = ItemsData.item
+					} else {
+						throw new Error('Item not found')
 					}
 					this.nextItemId = ItemsData.nextItemId
 				}
@@ -190,13 +217,20 @@ export default {
 		async updateItem(item, categoryId) {
 			try {
 				const cIndex = this.categories.findIndex(c => c.id === categoryId)
-				const iIndex = this.categories[cIndex].items.findIndex(i => i.id === item.id)
+				let iIndex = -1;
+				if(cIndex !== -1){
+					iIndex = this.categories[cIndex].items.findIndex(i => i.id === item.id)
+				} else {
+					throw new Error('Category not found')
+				}
 				if(cIndex !== -1 && iIndex !== -1){
 					this.categories[cIndex].items[iIndex] = item
 					const ItemsData = await itemAPI.updateItem(item, categoryId, this.nextItemId)
 					if(ItemsData.item){
 						this.categories[cIndex].items[iIndex] = ItemsData.item
 					}
+				} else {
+					throw new Error('Item not found')
 				}
 			} catch (error) {
 				console.error('Error updating item:', error)
@@ -210,12 +244,19 @@ export default {
 				}
 				const itemId = item.id
 				const cIndex = this.categories.findIndex(c => c.id === categoryId)
-				const iIndex = this.categories[cIndex].items.findIndex(i => i.id === itemId)
-				this.categories[cIndex].items[iIndex].removed = true
+				let iIndex = -1;
+				if(cIndex != -1){
+					iIndex = this.categories[cIndex].items.findIndex(i => i.id === itemId)
+				} else {
+					throw new Error('Category not found')
+				}
+				if(iIndex !== -1){
+					this.categories[cIndex].items[iIndex].removed = true
+				} else {
+					throw new Error('Item not found')
+				}
 				const ItemsData = await itemAPI.deleteItem(itemId, categoryId)
-				console.log(ItemsData)
 				if(ItemsData.itemId){
-					console.log(this.categories[cIndex].items[iIndex].removed)
 					this.categories[cIndex].items.splice(iIndex, 1)
 				}
 			} catch (error) {
@@ -239,6 +280,7 @@ export default {
 						} else if(sortOption === 'titleDesc') {
 							return b.title.localeCompare(a.title)
 						}
+						return 0
 					})
 				}
 			}

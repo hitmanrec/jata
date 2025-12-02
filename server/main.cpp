@@ -13,6 +13,12 @@
 #include "include/httplib.h"
 #include "ItemsKeeper.hpp"
 
+#define DEFAULT_ADDR "http://localhost"
+#define DEFAULT_PORT 8081
+
+#define INTERFACE_ADDR "http://localhost"
+#define INTERFACE_PORT 8080
+
 using json = nlohmann::json;
 
 const std::string DEFAULT_STORAGE = "test_save.json";
@@ -44,7 +50,7 @@ int main(int argc, char* argv[]) {
 
     // Enable CORS for frontend requests
     svr.set_default_headers({
-        {"Access-Control-Allow-Origin", "*"},
+        {"Access-Control-Allow-Origin", std::string(INTERFACE_ADDR) + ":" + std::to_string(INTERFACE_PORT)},
         {"Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS"},
         {"Access-Control-Allow-Headers", "Content-Type"}
     });
@@ -133,8 +139,8 @@ int main(int argc, char* argv[]) {
         }
     });
     
-    std::cout << "Server started at http://localhost:8081" << std::endl;
-    svr.listen("0.0.0.0", 8081);
+    std::cout << "Server started at " + std::string(DEFAULT_ADDR) + ":" + std::to_string(DEFAULT_PORT) << std::endl;
+    svr.listen("0.0.0.0", DEFAULT_PORT);
     
     return 0;
 }

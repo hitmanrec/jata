@@ -31,7 +31,7 @@ public:
 	}
 
 	int writeJson(const json& data, std::string outputFilePath = "") {
-		std::ofstream outputFile(outputFilePath.empty() || outputFilePath == "" ? filePath : outputFilePath);
+		std::ofstream outputFile(outputFilePath.empty() ? filePath : outputFilePath);
 		if(outputFile.is_open()){
 			try{
 				outputFile << data.dump(2);
@@ -62,7 +62,7 @@ public:
 				std::string title = "";
 				std::string status = "";
 				std::string description = "";
-				if(line[0] != '-' && line[0] != '+'){
+				if(!line.empty() && line[0] != '-' && line[0] != '+'){
 					categoryName = line;
 					data["categories"].push_back({
 						{"id", nextCategoryId}, 
@@ -190,7 +190,7 @@ public:
 				}
 			}else{
 				for(const auto& categoryId : request["categoryIds"]){
-					if(!getRemoved && categories[categoryId].removed){
+					if(categories.find(categoryId) == categories.end() || (!getRemoved && categories[categoryId].removed)){
 						continue;
 					}
 					if(request.contains("withItems") && request["withItems"]){
@@ -241,6 +241,9 @@ public:
 		Category c;
 		try{
 			c.fromJson(json::object({{"id", request["category"]["id"]}, {"name", request["category"]["name"]}, {"removed", false}, {"items", json::array()}}));
+			if(categories.find(c.id) == categories.end()){
+				throw std::runtime_error("Category not found");
+			}
 			categories[c.id].name = c.name;
 			WriteJsonFull();
 			response["category"] = json::object({
@@ -287,6 +290,9 @@ public:
 			if(request["nextItemId"] != nextItemId){
 				nextItemId = request["nextItemId"].get<unsigned int>();
 			}
+			if(categories.find(request["categoryId"]) == categories.end()){
+				throw std::runtime_error("Category not found");
+			}
 			categories[request["categoryId"]].items.insert(std::make_pair(request["item"]["id"], i));
 			response["categoryId"] = request["categoryId"];
 			WriteJsonFull();
@@ -306,6 +312,9 @@ public:
 		try {
 			Item i;
 			i.fromJson(request["item"]);
+			if(categories.find(categoryId) == categories.end()){
+				throw std::runtime_error("Category not found");
+			}
 			categories[categoryId].items[i.getId()] = i;
 			response["categoryId"] = categoryId;
 			WriteJsonFull();
@@ -323,14 +332,13 @@ public:
 		int categoryId = request["categoryId"];
 		int itemId = request["itemId"];
 		try{
-			if(categories[categoryId].items.find(itemId) != categories[categoryId].items.end()){
+			if(categories.find(categoryId) != categories.end() && categories[categoryId].items.find(itemId) != categories[categoryId].items.end()){
 				categories[categoryId].items[itemId].remove();
 			}else{
 				throw std::runtime_error("Item not found");
 			}
 			WriteJsonFull();
-			response["itemId"] = categories[categoryId].items[itemId].toJson();
-			std::cout << "Item deleted: " << response["itemId"].dump(1) << std::endl;
+			response["itemId"] = categories[categoryId].items[itemId].getId();
 			return response;
 		}catch(const std::exception& e){
 			std::cerr << "Error deleting item: " << e.what() << std::endl;
@@ -340,32 +348,37 @@ public:
 	}
 
 	int LoadJsonFull() {
-		json data = fm.loadJson();
-		nextCategoryId = data["nextCategoryId"];
-		nextItemId = data["nextItemId"];
-		for(const auto& category : data["categories"]){
-			Category c;
-			c.fromJson(category, debugLevel);
-			categories.insert(std::make_pair(c.id, c));
+		try{
+			json data = fm.loadJson();
+			nextCategoryId = data["nextCategoryId"];
+			nextItemId = data["nextItemId"];
+			for(const auto& category : data["categories"]){
+				Category c;
+				c.fromJson(category, debugLevel);
+				categories.insert(std::make_pair(c.id, c));
+			}
+			return 0;
 		}
-		return 0;
+		catch(const std::exception& e){
+			std::cerr << "Error loading JSON: " << e.what() << std::endl;
+			return -1;
+		}
 	}
 
 	int WriteJsonFull(std::string outputFilePath = "") {
-		json data;
-		data["nextCategoryId"] = nextCategoryId;
-		data["nextItemId"] = nextItemId;
-		data["categories"] = json::array();
-		for(const auto& category : categories){
-			data["categories"].push_back(category.second.toJson());
+		try{
+			json data;
+			data["nextCategoryId"] = nextCategoryId;
+			data["nextItemId"] = nextItemId;
+			data["categories"] = json::array();
+			for(const auto& category : categories){
+				data["categories"].push_back(category.second.toJson());
+			}
+			return fm.writeJson(data, outputFilePath);
 		}
-		return fm.writeJson(data, outputFilePath);
+		catch(const std::exception& e){
+			std::cerr << "Error writing JSON: " << e.what() << std::endl;
+			return -1;
+		}
 	}
-
-	//categories management
-
-
-	//items management
-
-
 };
