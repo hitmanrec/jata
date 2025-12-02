@@ -21,7 +21,7 @@
 
 using json = nlohmann::json;
 
-const std::string DEFAULT_STORAGE = "test_save.json";
+const std::string DEFAULT_STORAGE = "save.json";
 
 int main(int argc, char* argv[]) {
     std::string inputFile = DEFAULT_STORAGE;

@@ -11,6 +11,35 @@ using json = nlohmann::json;
 class FileManager {
 private:
 	std::string filePath;
+
+	json createDummyData() {
+		json data;
+		data["nextCategoryId"] = 1;
+		data["nextItemId"] = 1;
+		data["categories"] = json::array();
+		
+		json category;
+		category["id"] = 0;
+		category["name"] = "Films";
+		category["removed"] = false;
+		category["items"] = json::array();
+		
+		json item;
+		item["id"] = 0;
+		item["title"] = "1+1";
+		item["status"] = "planned";
+		item["description"] = "A film about a real mans friendship";
+		item["rating"] = "";
+		item["expectation"] = "high";
+		item["creationTime"] = "";
+		item["completionTime"] = "";
+		item["tags"] = json::array();
+		item["removed"] = false;
+
+		category["items"].push_back(item);
+		data["categories"].push_back(category);
+		return data;
+	}
 public:
 	FileManager(const std::string& _filePath) : filePath(_filePath) {}
 
@@ -21,13 +50,21 @@ public:
 			json data;
 				inputFile >> data;
 				inputFile.close();
+				if(data.is_object() && data.contains("nextCategoryId") && data.contains("categories")){
+					return data;
+				}else{
+					return createDummyData();
+				}
 				return data;
 			}catch(const std::exception& e){
 				std::cerr << "Error reading from file: " << e.what() << std::endl;
-				return json::parse("[]");
+				inputFile.close();
+				return createDummyData();
 			}
 		}
-		return json::parse("[]");
+		json dummyData = createDummyData();
+		writeJson(dummyData);
+		return dummyData;
 	}
 
 	int writeJson(const json& data, std::string outputFilePath = "") {

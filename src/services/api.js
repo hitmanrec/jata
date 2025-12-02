@@ -1,3 +1,5 @@
+const isElectron = typeof window !== 'undefined' && window.process && window.process.type;
+
 const API_BASE_URL = 'http://localhost:8081'
 
 async function apiRequest(endpoint, options = {}) {

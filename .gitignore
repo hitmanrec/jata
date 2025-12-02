@@ -47,6 +47,8 @@ pnpm-debug.log*
 *.sw?
 
 
+dist-electron/
+
 server/test_save_copy.json
 server/jata_server.exe
 server/sample_input.txt
